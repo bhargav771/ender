@@ -1,0 +1,17 @@
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.git/
+.gitignore
+.env
+output/
+*.csv
+*.json
+!package.json
+.vscode/
+.idea/
+*.log
+.DS_Store
+Thumbs.db
+.agents/
