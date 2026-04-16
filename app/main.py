@@ -3,6 +3,7 @@
 import logging
 import os
 import secrets
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Depends, HTTPException
@@ -101,6 +102,16 @@ async def get_job_status(job_id: str):
     if not job:
         return JSONResponse(status_code=404, content={"error": "Job not found"})
 
+    # Calculate ETA
+    eta_seconds = None
+    elapsed_seconds = None
+    if job.started_at:
+        elapsed_seconds = (datetime.utcnow() - job.started_at).total_seconds()
+        if job.leads_per_combination and job.completed < job.total:
+            avg_time = sum(job.leads_per_combination) / len(job.leads_per_combination)
+            remaining = job.total - job.completed
+            eta_seconds = round(avg_time * remaining)
+
     return {
         "job_id": job.job_id,
         "status": job.status,
@@ -109,6 +120,9 @@ async def get_job_status(job_id: str):
         "results_count": len(job.results),
         "errors": job.errors,
         "results": [r.model_dump() for r in job.results],
+        "duplicates_skipped": job.duplicates_skipped,
+        "eta_seconds": eta_seconds,
+        "elapsed_seconds": round(elapsed_seconds) if elapsed_seconds else None,
     }
 
 
@@ -187,6 +201,40 @@ async def delete_all_data(_auth: None = Depends(verify_api_key)):
 
 
 # ─── Export Endpoints ───────────────────────────────────────────────
+
+@app.get("/api/export-task/{job_id}/{fmt}")
+async def export_task_results(job_id: str, fmt: str):
+    """Export task results from database as CSV or JSON."""
+    results = await db.get_task_results(job_id)
+    if not results:
+        return JSONResponse(status_code=400, content={"error": "No results for this task"})
+
+    from app.models import LeadResult
+    leads = []
+    for row in results:
+        lead = LeadResult()
+        for field in lead.model_fields:
+            if field in row and row[field] is not None:
+                setattr(lead, field, str(row[field]))
+        leads.append(lead)
+
+    if fmt == "csv":
+        content = export_to_csv(leads)
+        return StreamingResponse(
+            iter([content]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=task_{job_id}.csv"},
+        )
+    elif fmt == "json":
+        content = export_to_json(leads)
+        return StreamingResponse(
+            iter([content]),
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename=task_{job_id}.json"},
+        )
+    else:
+        return JSONResponse(status_code=400, content={"error": "Invalid format. Use 'csv' or 'json'."})
+
 
 @app.get("/api/export/{job_id}/{fmt}")
 async def export_results(job_id: str, fmt: str):

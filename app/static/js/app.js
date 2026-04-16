@@ -41,6 +41,20 @@ function loadSavedApiKey() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// TIME FORMATTING HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+function formatDuration(seconds) {
+    if (seconds == null || seconds < 0) return '--';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // TAB SWITCHING
 // ═══════════════════════════════════════════════════════════════
 
@@ -386,6 +400,22 @@ function startPolling() {
             document.getElementById('progressText').textContent = `${data.completed} / ${data.total} searches`;
             document.getElementById('progressPercent').textContent = `${percent}%`;
 
+            // Update ETA and elapsed time
+            const etaEl = document.getElementById('progressEta');
+            const elapsedEl = document.getElementById('progressElapsed');
+            if (etaEl) {
+                etaEl.textContent = data.eta_seconds != null ? `ETA: ${formatDuration(data.eta_seconds)}` : '';
+            }
+            if (elapsedEl) {
+                elapsedEl.textContent = data.elapsed_seconds != null ? `Elapsed: ${formatDuration(data.elapsed_seconds)}` : '';
+            }
+
+            // Update duplicates skipped stat
+            const dupsEl = document.getElementById('statDuplicates');
+            if (dupsEl) {
+                dupsEl.textContent = data.duplicates_skipped || 0;
+            }
+
             allResults = data.results || [];
             updateLiveStats();
             renderResults(allResults);
@@ -409,8 +439,10 @@ function startPolling() {
                 const badge = document.querySelector('.monitor-badge');
 
                 if (data.status === 'completed') {
-                    showToast(`Done! Found ${data.results_count} leads.`, 'success');
-                    addLogEntry('info', `Job completed: ${data.results_count} leads found`);
+                    let doneMsg = `Done! Found ${data.results_count} leads.`;
+                    if (data.duplicates_skipped > 0) doneMsg += ` (${data.duplicates_skipped} duplicates skipped)`;
+                    showToast(doneMsg, 'success');
+                    addLogEntry('info', `Job completed: ${data.results_count} leads found, ${data.duplicates_skipped || 0} duplicates skipped`);
                     if (badge) { badge.className = 'monitor-badge idle'; badge.textContent = 'Done'; }
                 } else {
                     showToast('Scraping failed. Check logs.', 'error');
@@ -523,10 +555,16 @@ async function loadTaskHistory() {
                 <td style="font-size:0.75rem;">${created}</td>
                 <td>
                     <div class="task-actions">
-                        <button class="btn btn-outline btn-xs" onclick="viewTaskResults('${t.job_id}')">
-                            <i class="fas fa-eye"></i> View
+                        <button class="btn btn-outline btn-xs" onclick="viewTaskResults('${t.job_id}')" title="View results">
+                            <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn btn-danger btn-xs" onclick="deleteTask('${t.job_id}')">
+                        <button class="btn btn-success btn-xs" onclick="downloadTaskExport('${t.job_id}', 'csv')" title="Download CSV">
+                            <i class="fas fa-file-csv"></i>
+                        </button>
+                        <button class="btn btn-outline btn-xs" onclick="downloadTaskExport('${t.job_id}', 'json')" title="Download JSON">
+                            <i class="fas fa-file-code"></i>
+                        </button>
+                        <button class="btn btn-danger btn-xs" onclick="deleteTask('${t.job_id}')" title="Delete task">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -556,6 +594,17 @@ async function viewTaskResults(jobId) {
         document.getElementById('dbResultCount').textContent = `${results.length} records (Task: ${jobId})`;
     } catch (error) {
         showToast('Failed to load results', 'error');
+    }
+}
+
+async function downloadTaskExport(jobId, format) {
+    try {
+        const response = await fetch(`/api/export-task/${jobId}/${format}`);
+        if (!response.ok) throw new Error('Export failed');
+        downloadBlob(response, `task_${jobId}.${format}`);
+        showToast(`Task ${jobId} exported as ${format.toUpperCase()}`, 'success');
+    } catch (error) {
+        showToast(error.message, 'error');
     }
 }
 

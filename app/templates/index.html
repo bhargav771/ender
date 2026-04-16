@@ -123,10 +123,17 @@
                             <div class="monitor-stats">
                                 <div class="monitor-stat"><div class="ms-label">LEADS FOUND</div><div class="ms-value" id="statTotal">0</div></div>
                                 <div class="monitor-stat"><div class="ms-label">WITH EMAILS</div><div class="ms-value accent-green" id="statEmails">0</div></div>
-                                <div class="monitor-stat"><div class="ms-label">SUCCESS</div><div class="ms-value accent-green" id="statSuccess">--</div></div>
+                                <div class="monitor-stat"><div class="ms-label">DUPLICATES SKIPPED</div><div class="ms-value accent-orange" id="statDuplicates">0</div></div>
                                 <div class="monitor-stat"><div class="ms-label">POS FOUND</div><div class="ms-value accent-orange" id="statPos">0</div></div>
                             </div>
-                            <div class="progress-card" id="progressContainer" style="display:none;"><div class="progress-info"><span id="progressText">Starting...</span><span id="progressPercent">0%</span></div><div class="progress-track"><div class="progress-fill" id="progressBar"></div></div></div>
+                            <div class="progress-card" id="progressContainer" style="display:none;">
+                                <div class="progress-info"><span id="progressText">Starting...</span><span id="progressPercent">0%</span></div>
+                                <div class="progress-track"><div class="progress-fill" id="progressBar"></div></div>
+                                <div class="progress-eta" style="display:flex;justify-content:space-between;margin-top:0.5rem;font-size:0.75rem;color:var(--text-secondary);">
+                                    <span id="progressElapsed"></span>
+                                    <span id="progressEta"></span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="card" style="margin-top:1rem;"><div class="card-header"><h3>Export Results</h3></div><div class="card-body"><div class="export-btns"><button class="btn btn-success btn-sm" onclick="exportResults('csv')"><i class="fas fa-file-csv"></i> Export CSV</button><button class="btn btn-outline btn-sm" onclick="exportResults('json')"><i class="fas fa-file-code"></i> Export JSON</button></div></div></div>
@@ -144,7 +151,7 @@
         <!-- DATA TABLE -->
         <div class="page-content" id="tabDatabase" style="display:none;">
             <div class="card">
-                <div class="card-header"><h3><i class="fas fa-table"></i> Data Table View</h3><div class="card-actions"><div class="search-box"><i class="fas fa-search"></i><input type="text" id="dbFilterInput" placeholder="Search records, domains, emails..." oninput="filterDbTable()"></div><select id="industryFilter" class="form-select" onchange="loadDatabaseData()"><option value="">All Industries</option></select><button class="btn btn-outline btn-sm" onclick="exportDbCsv()"><i class="fas fa-download"></i> Export</button></div></div>
+                <div class="card-header"><h3><i class="fas fa-table"></i> Data Table View</h3><div class="card-actions"><div class="search-box"><i class="fas fa-search"></i><input type="text" id="dbFilterInput" placeholder="Search records, domains, emails..." oninput="filterDbTable()"></div><select id="industryFilter" class="form-select" onchange="loadDatabaseData()"><option value="">All Industries</option></select><button class="btn btn-success btn-sm" onclick="exportDbCsv()"><i class="fas fa-file-csv"></i> Bulk Export CSV</button><button class="btn btn-outline btn-sm" onclick="exportDbJson()"><i class="fas fa-file-code"></i> Bulk Export JSON</button></div></div>
                 <div class="card-body no-pad">
                     <div class="db-toolbar"><span class="record-count" id="dbResultCount">0 records</span><div class="toolbar-actions"><button class="btn btn-outline btn-xs" onclick="loadDatabaseData()"><i class="fas fa-rotate"></i> Refresh</button><button class="btn btn-outline btn-xs" onclick="exportDbCsv()"><i class="fas fa-file-csv"></i> CSV</button><button class="btn btn-outline btn-xs" onclick="exportDbJson()"><i class="fas fa-file-code"></i> JSON</button></div></div>
                     <div class="table-wrapper" id="dbTableContainer" style="display:none;"><table class="data-table"><thead><tr><th>COMPANY</th><th>DOMAIN</th><th>INDUSTRY</th><th>EMAIL</th><th>PHONE</th><th>RATING</th><th>POS SYSTEM</th><th>STATUS</th></tr></thead><tbody id="dbBody"></tbody></table></div>

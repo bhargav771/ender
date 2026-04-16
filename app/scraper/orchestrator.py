@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 import uuid
 from datetime import datetime
 
@@ -37,6 +38,7 @@ async def _enrich_lead(lead: LeadResult) -> LeadResult:
             facebook_url=lead.facebook_link,
             instagram_url=lead.instagram_link,
             google_maps_email=lead.google_maps_email,
+            store_name=lead.name,
         )
 
         # Update lead with email data
@@ -116,6 +118,7 @@ async def run_scrape_job(request: ScrapeRequest) -> str:
         job_id=job_id,
         status="running",
         total=len(request.search_terms) * len(request.zip_codes),
+        started_at=datetime.utcnow(),
     )
     _jobs[job_id] = job
 
@@ -141,6 +144,7 @@ async def _execute_job(job: ScrapeJob, request: ScrapeRequest):
 
         async def _scrape_combination(search_term: str, zip_line: str):
             async with semaphore:
+                combo_start = time.time()
                 zip_data = _parse_zip_code(zip_line)
 
                 async def progress_cb(current, total):
@@ -159,17 +163,20 @@ async def _execute_job(job: ScrapeJob, request: ScrapeRequest):
 
                 # Check for duplicates against DB before enriching
                 new_leads = []
+                skipped = 0
                 for lead in leads:
                     if lead.name:
                         is_dup = await db.is_duplicate(lead.name, lead.address)
                         if is_dup:
                             logger.info(f"  SKIP (duplicate): {lead.name}")
+                            skipped += 1
                         else:
                             new_leads.append(lead)
 
+                job.duplicates_skipped += skipped
                 logger.info(
                     f"New leads: {len(new_leads)} / {len(leads)} "
-                    f"(skipped {len(leads) - len(new_leads)} duplicates)"
+                    f"(skipped {skipped} duplicates)"
                 )
 
                 # Enrich each NEW lead with emails and POS detection
@@ -186,6 +193,10 @@ async def _execute_job(job: ScrapeJob, request: ScrapeRequest):
 
                 job.results.extend(enriched_leads)
                 job.completed += 1
+
+                # Track timing for ETA calculation
+                combo_elapsed = time.time() - combo_start
+                job.leads_per_combination.append(combo_elapsed)
 
                 # Update task progress in DB
                 await db.update_task_status(
