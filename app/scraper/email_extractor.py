@@ -550,15 +550,52 @@ async def extract_instagram_email(instagram_url: str) -> list[str]:
     return emails
 
 
+def _match_store_name_email(emails: list[str], store_name: str, website_url: str) -> str:
+    """
+    Smart email matching: check if store name's first 3 letters or website domain
+    matches any email's local part or domain.
+    Returns the best matching email or empty string.
+    """
+    if not emails or not store_name:
+        return ""
+
+    store_prefix = store_name.strip().lower().replace(" ", "")[:3]
+    domain = ""
+    if website_url:
+        try:
+            domain = urlparse(website_url).netloc.replace("www.", "").split(":")[0].split(".")[0].lower()
+        except Exception:
+            pass
+
+    # Check each email for store name prefix or domain match
+    for email in emails:
+        email_lower = email.lower()
+        local_part = email_lower.split("@")[0]
+        email_domain = email_lower.split("@")[-1].split(".")[0] if "@" in email_lower else ""
+
+        # Match store name first 3 letters against local part or email domain
+        if store_prefix and len(store_prefix) >= 3:
+            if store_prefix in local_part or store_prefix in email_domain:
+                return email
+
+        # Match website domain against email domain
+        if domain and len(domain) >= 3:
+            if domain in local_part or domain in email_domain:
+                return email
+
+    return ""
+
+
 async def extract_all_emails(
     website_url: str = "",
     facebook_url: str = "",
     instagram_url: str = "",
     google_maps_email: str = "",
+    store_name: str = "",
 ) -> dict:
     """
     Extract emails from all available sources and consolidate.
-    Uses domain-matched email selection for best results.
+    Smart priority: Facebook first, then store name / domain match, then fallback.
     """
     tasks = [
         extract_website_emails(website_url),
@@ -587,18 +624,32 @@ async def extract_all_emails(
 
     all_emails_list = sorted(all_emails)
 
-    # Determine final email using domain-matched selection
+    # Smart email priority:
+    # 1. Facebook email (first priority)
+    # 2. Store name first 3 letters / domain match against all website emails
+    # 3. Domain-matched website email
+    # 4. Google Maps email
+    # 5. Instagram email
     final_email = ""
     source = ""
-    if website_emails:
+
+    if fb_emails:
+        final_email = fb_emails[0]
+        source = "Facebook"
+    elif website_emails and store_name:
+        matched = _match_store_name_email(website_emails, store_name, website_url)
+        if matched:
+            final_email = matched
+            source = "Website (store match)"
+        else:
+            final_email = get_domain_matched_email(website_emails, website_url)
+            source = "Website"
+    elif website_emails:
         final_email = get_domain_matched_email(website_emails, website_url)
         source = "Website"
     elif google_maps_email:
         final_email = google_maps_email
         source = "Google Maps"
-    elif fb_emails:
-        final_email = fb_emails[0]
-        source = "Facebook"
     elif ig_emails:
         final_email = ig_emails[0]
         source = "Instagram"

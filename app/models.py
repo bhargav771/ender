@@ -2,6 +2,7 @@
 
 from typing import Optional
 from pydantic import BaseModel, Field
+from datetime import datetime
 
 
 class ScrapeRequest(BaseModel):
@@ -74,3 +75,6 @@ class ScrapeJob(BaseModel):
     completed: int = 0
     results: list[LeadResult] = []
     errors: list[str] = []
+    duplicates_skipped: int = 0
+    started_at: Optional[datetime] = None
+    leads_per_combination: list[float] = []  # track timing per combination
