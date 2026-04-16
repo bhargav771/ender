@@ -8,6 +8,53 @@ let allResults = [];
 let dbData = [];
 
 // ═══════════════════════════════════════════════════════════════
+// API KEY HELPER
+// ═══════════════════════════════════════════════════════════════
+
+function getApiHeaders(contentType) {
+    const headers = {};
+    if (contentType) headers['Content-Type'] = contentType;
+    const apiKey = localStorage.getItem('scrapepro_api_key');
+    if (apiKey) headers['X-API-Key'] = apiKey;
+    return headers;
+}
+
+function saveApiKey() {
+    const input = document.getElementById('apiKeyInput');
+    const key = (input.value || '').trim();
+    if (!key) { showToast('Enter an API key first', 'error'); return; }
+    localStorage.setItem('scrapepro_api_key', key);
+    showToast('API key saved to browser', 'success');
+}
+
+function clearApiKey() {
+    localStorage.removeItem('scrapepro_api_key');
+    const input = document.getElementById('apiKeyInput');
+    if (input) input.value = '';
+    showToast('API key cleared', 'success');
+}
+
+function loadSavedApiKey() {
+    const saved = localStorage.getItem('scrapepro_api_key');
+    const input = document.getElementById('apiKeyInput');
+    if (saved && input) input.value = saved;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TIME FORMATTING HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+function formatDuration(seconds) {
+    if (seconds == null || seconds < 0) return '--';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // TAB SWITCHING
 // ═══════════════════════════════════════════════════════════════
 
@@ -312,7 +359,7 @@ async function startScraping() {
     try {
         const response = await fetch('/api/scrape', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getApiHeaders('application/json'),
             body: JSON.stringify({ search_terms: searchTerms, zip_codes: zipCodes, max_results_per_search: maxResults }),
         });
 
@@ -353,6 +400,22 @@ function startPolling() {
             document.getElementById('progressText').textContent = `${data.completed} / ${data.total} searches`;
             document.getElementById('progressPercent').textContent = `${percent}%`;
 
+            // Update ETA and elapsed time
+            const etaEl = document.getElementById('progressEta');
+            const elapsedEl = document.getElementById('progressElapsed');
+            if (etaEl) {
+                etaEl.textContent = data.eta_seconds != null ? `ETA: ${formatDuration(data.eta_seconds)}` : '';
+            }
+            if (elapsedEl) {
+                elapsedEl.textContent = data.elapsed_seconds != null ? `Elapsed: ${formatDuration(data.elapsed_seconds)}` : '';
+            }
+
+            // Update duplicates skipped stat
+            const dupsEl = document.getElementById('statDuplicates');
+            if (dupsEl) {
+                dupsEl.textContent = data.duplicates_skipped || 0;
+            }
+
             allResults = data.results || [];
             updateLiveStats();
             renderResults(allResults);
@@ -376,8 +439,10 @@ function startPolling() {
                 const badge = document.querySelector('.monitor-badge');
 
                 if (data.status === 'completed') {
-                    showToast(`Done! Found ${data.results_count} leads.`, 'success');
-                    addLogEntry('info', `Job completed: ${data.results_count} leads found`);
+                    let doneMsg = `Done! Found ${data.results_count} leads.`;
+                    if (data.duplicates_skipped > 0) doneMsg += ` (${data.duplicates_skipped} duplicates skipped)`;
+                    showToast(doneMsg, 'success');
+                    addLogEntry('info', `Job completed: ${data.results_count} leads found, ${data.duplicates_skipped || 0} duplicates skipped`);
                     if (badge) { badge.className = 'monitor-badge idle'; badge.textContent = 'Done'; }
                 } else {
                     showToast('Scraping failed. Check logs.', 'error');
@@ -490,10 +555,16 @@ async function loadTaskHistory() {
                 <td style="font-size:0.75rem;">${created}</td>
                 <td>
                     <div class="task-actions">
-                        <button class="btn btn-outline btn-xs" onclick="viewTaskResults('${t.job_id}')">
-                            <i class="fas fa-eye"></i> View
+                        <button class="btn btn-outline btn-xs" onclick="viewTaskResults('${t.job_id}')" title="View results">
+                            <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn btn-danger btn-xs" onclick="deleteTask('${t.job_id}')">
+                        <button class="btn btn-success btn-xs" onclick="downloadTaskExport('${t.job_id}', 'csv')" title="Download CSV">
+                            <i class="fas fa-file-csv"></i>
+                        </button>
+                        <button class="btn btn-outline btn-xs" onclick="downloadTaskExport('${t.job_id}', 'json')" title="Download JSON">
+                            <i class="fas fa-file-code"></i>
+                        </button>
+                        <button class="btn btn-danger btn-xs" onclick="deleteTask('${t.job_id}')" title="Delete task">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -526,11 +597,22 @@ async function viewTaskResults(jobId) {
     }
 }
 
+async function downloadTaskExport(jobId, format) {
+    try {
+        const response = await fetch(`/api/export-task/${jobId}/${format}`);
+        if (!response.ok) throw new Error('Export failed');
+        downloadBlob(response, `task_${jobId}.${format}`);
+        showToast(`Task ${jobId} exported as ${format.toUpperCase()}`, 'success');
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
+}
+
 async function deleteTask(jobId) {
     if (!confirm(`Delete task ${jobId} and ALL its data?`)) return;
 
     try {
-        const response = await fetch(`/api/tasks/${jobId}`, { method: 'DELETE' });
+        const response = await fetch(`/api/tasks/${jobId}`, { method: 'DELETE', headers: getApiHeaders() });
         const data = await response.json();
         if (response.ok) {
             showToast('Task deleted.', 'success');
@@ -550,7 +632,7 @@ async function deleteAllData() {
     if (!confirm('Are you SURE? This CANNOT be undone.')) return;
 
     try {
-        const response = await fetch('/api/data', { method: 'DELETE' });
+        const response = await fetch('/api/data', { method: 'DELETE', headers: getApiHeaders() });
         if (response.ok) {
             showToast('All data deleted.', 'success');
             addLogEntry('warn', 'All data deleted by user');
@@ -631,7 +713,8 @@ function renderDbTable(data) {
 
     dbBody.innerHTML = data.map((r, i) => {
         const websiteUrl = r.website ? (r.website.startsWith('http') ? r.website : 'https://' + r.website) : '';
-        const domain = websiteUrl ? new URL(websiteUrl).hostname.replace('www.', '') : '-';
+        let domain = '-';
+        try { if (websiteUrl) domain = new URL(websiteUrl).hostname.replace('www.', ''); } catch (e) { domain = websiteUrl.replace(/^https?:\/\//, '').split('/')[0] || '-'; }
         const statusBadge = (r.status || '') === 'Open' ?
             '<span class="cell-open">Active</span>' :
             '<span class="cell-closed">Closed</span>';
@@ -753,3 +836,4 @@ async function checkDbConnection() {
 // Boot
 switchTab('dashboard');
 checkDbConnection();
+loadSavedApiKey();
