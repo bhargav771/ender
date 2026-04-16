@@ -3,365 +3,206 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LeadScraper Pro — Restaurant Lead Generation</title>
+    <title>ScrapePro - Data Scraper Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <!-- Sidebar Navigation -->
     <nav class="sidebar" id="sidebar">
         <div class="sidebar-brand">
             <div class="brand-icon"><i class="fas fa-bolt"></i></div>
-            <div class="brand-text">
-                <span class="brand-name">LeadScraper</span>
-                <span class="brand-tag">PRO</span>
-            </div>
+            <div class="brand-text"><span class="brand-name">ScrapePro</span></div>
         </div>
-
         <div class="sidebar-nav">
-            <a class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
-                <i class="fas fa-chart-pie"></i>
-                <span>Dashboard</span>
-            </a>
-            <a class="nav-item" data-tab="scraper" onclick="switchTab('scraper')">
-                <i class="fas fa-spider"></i>
-                <span>Scraper</span>
-            </a>
-            <a class="nav-item" data-tab="history" onclick="switchTab('history')">
-                <i class="fas fa-clock-rotate-left"></i>
-                <span>Task History</span>
-            </a>
-            <a class="nav-item" data-tab="database" onclick="switchTab('database')">
-                <i class="fas fa-database"></i>
-                <span>Database</span>
-            </a>
+            <div class="nav-section-label">MAIN</div>
+            <a class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')"><i class="fas fa-chart-pie"></i><span>Dashboard</span></a>
+            <a class="nav-item" data-tab="scraper" onclick="switchTab('scraper')"><i class="fas fa-crosshairs"></i><span>Scraper Control Panel</span></a>
+            <a class="nav-item" data-tab="database" onclick="switchTab('database')"><i class="fas fa-table"></i><span>Data Table View</span></a>
+            <a class="nav-item" data-tab="history" onclick="switchTab('history')"><i class="fas fa-flask"></i><span>Enrichment Module</span></a>
+            <div class="nav-section-label">SYSTEM</div>
+            <a class="nav-item" data-tab="logs" onclick="switchTab('logs')"><i class="fas fa-chart-line"></i><span>Logs &amp; Monitoring</span></a>
+            <a class="nav-item" data-tab="settings" onclick="switchTab('settings')"><i class="fas fa-gear"></i><span>Settings</span></a>
         </div>
-
         <div class="sidebar-footer">
-            <div class="db-status" id="dbStatus">
-                <div class="status-dot connected"></div>
-                <span>Supabase Connected</span>
+            <div class="user-profile">
+                <div class="user-avatar">S</div>
+                <div class="user-info"><span class="user-name">ScrapePro User</span><span class="user-role">Admin Workspace</span></div>
+                <div class="db-indicator"><div class="status-dot" id="dbDot"></div></div>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content Area -->
     <div class="main-wrapper">
-        <!-- Top Bar -->
         <header class="topbar">
-            <button class="sidebar-toggle" onclick="toggleSidebar()">
-                <i class="fas fa-bars"></i>
-            </button>
-            <div class="topbar-title" id="pageTitle">Dashboard</div>
+            <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+            <div class="topbar-left">
+                <div class="topbar-title" id="pageTitle">Dashboard Overview</div>
+                <div class="topbar-subtitle" id="pageSubtitle">Real-time scraping metrics &amp; health</div>
+            </div>
             <div class="topbar-actions">
-                <div class="live-indicator" id="liveIndicator" style="display:none;">
-                    <div class="pulse-dot"></div>
-                    <span>Scraping Live</span>
-                </div>
+                <div class="search-topbar"><i class="fas fa-search"></i><input type="text" placeholder="Search jobs, logs..." id="globalSearch"></div>
+                <button class="topbar-icon-btn" title="Notifications"><i class="fas fa-bell"></i></button>
+                <div class="live-indicator" id="liveIndicator" style="display:none;"><div class="pulse-dot"></div><span>Scraping Live</span></div>
+                <button class="btn btn-primary btn-sm" onclick="switchTab('scraper')"><i class="fas fa-play"></i> New Scrape</button>
             </div>
         </header>
 
-        <!-- ==================== DASHBOARD TAB ==================== -->
+        <!-- DASHBOARD -->
         <div class="page-content" id="tabDashboard">
-            <!-- Stats Grid -->
             <div class="stats-grid">
-                <div class="stat-card gradient-purple">
-                    <div class="stat-icon"><i class="fas fa-building"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-number" id="dbTotalBiz">0</div>
-                        <div class="stat-label">Total Businesses</div>
-                    </div>
-                </div>
-                <div class="stat-card gradient-green">
-                    <div class="stat-icon"><i class="fas fa-envelope"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-number" id="dbTotalEmails">0</div>
-                        <div class="stat-label">Emails Found</div>
-                    </div>
-                </div>
-                <div class="stat-card gradient-orange">
-                    <div class="stat-icon"><i class="fas fa-cash-register"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-number" id="dbTotalPos">0</div>
-                        <div class="stat-label">POS Detected</div>
-                    </div>
-                </div>
-                <div class="stat-card gradient-blue">
-                    <div class="stat-icon"><i class="fas fa-list-check"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-number" id="dbTotalTasks">0</div>
-                        <div class="stat-label">Tasks Completed</div>
-                    </div>
-                </div>
+                <div class="stat-card"><div class="stat-content"><div class="stat-number" id="dbTotalTasks">0</div><div class="stat-label">TOTAL JOBS</div><div class="stat-trend up"><i class="fas fa-arrow-up"></i> <span>12.5%</span> vs last week</div></div><div class="stat-icon-wrap green"><i class="fas fa-list-check"></i></div></div>
+                <div class="stat-card"><div class="stat-content"><div class="stat-number" id="dbTotalBiz">0</div><div class="stat-label">RECORDS COLLECTED</div><div class="stat-trend up"><i class="fas fa-arrow-up"></i> <span>8.2%</span> vs last week</div></div><div class="stat-icon-wrap blue"><i class="fas fa-building"></i></div></div>
+                <div class="stat-card"><div class="stat-content"><div class="stat-number" id="dbTotalEmails">0</div><div class="stat-label">EMAILS FOUND</div><div class="stat-trend down"><i class="fas fa-arrow-down"></i> <span>4.1%</span> vs last week</div></div><div class="stat-icon-wrap red"><i class="fas fa-envelope"></i></div></div>
+                <div class="stat-card"><div class="stat-content"><div class="stat-number" id="dbTotalPos">0</div><div class="stat-label">POS DETECTED</div><div class="stat-trend neutral"><i class="fas fa-minus"></i> <span>1.5%</span> vs last week</div></div><div class="stat-icon-wrap purple"><i class="fas fa-cash-register"></i></div></div>
             </div>
-
-            <!-- Dashboard Charts Row -->
             <div class="dashboard-row">
-                <div class="card card-lg">
-                    <div class="card-header">
-                        <h3><i class="fas fa-chart-bar"></i> Recent Activity</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="recent-tasks" id="recentTasks">
-                            <div class="empty-placeholder">
-                                <i class="fas fa-inbox"></i>
-                                <p>No tasks yet. Start scraping to see activity here.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card card-sm">
-                    <div class="card-header">
-                        <h3><i class="fas fa-bullseye"></i> Quick Stats</h3>
-                    </div>
+                <div class="card">
+                    <div class="card-header"><h3>Success Rate</h3><div class="card-header-tabs"><button class="header-tab active">30D</button><button class="header-tab">7D</button><button class="header-tab">24H</button></div></div>
                     <div class="card-body">
                         <div class="quick-stats">
-                            <div class="quick-stat-item">
-                                <span class="qs-label">Email Rate</span>
-                                <span class="qs-value" id="emailRate">0%</span>
-                                <div class="qs-bar"><div class="qs-bar-fill green" id="emailRateBar" style="width:0%"></div></div>
-                            </div>
-                            <div class="quick-stat-item">
-                                <span class="qs-label">POS Detection Rate</span>
-                                <span class="qs-value" id="posRate">0%</span>
-                                <div class="qs-bar"><div class="qs-bar-fill orange" id="posRateBar" style="width:0%"></div></div>
-                            </div>
-                            <div class="quick-stat-item">
-                                <span class="qs-label">Industries Covered</span>
-                                <span class="qs-value" id="industryCount">0</span>
-                                <div class="qs-bar"><div class="qs-bar-fill purple" id="industryBar" style="width:0%"></div></div>
-                            </div>
+                            <div class="quick-stat-item"><div class="qs-row"><span class="qs-label">Email Rate</span><span class="qs-value" id="emailRate">0%</span></div><div class="qs-bar"><div class="qs-bar-fill green" id="emailRateBar" style="width:0%"></div></div></div>
+                            <div class="quick-stat-item"><div class="qs-row"><span class="qs-label">POS Detection Rate</span><span class="qs-value" id="posRate">0%</span></div><div class="qs-bar"><div class="qs-bar-fill orange" id="posRateBar" style="width:0%"></div></div></div>
+                            <div class="quick-stat-item"><div class="qs-row"><span class="qs-label">Industries Covered</span><span class="qs-value" id="industryCount">0</span></div><div class="qs-bar"><div class="qs-bar-fill purple" id="industryBar" style="width:0%"></div></div></div>
+                            <div class="quick-stat-item"><div class="qs-row"><span class="qs-label">PROXY HEALTH</span><span class="qs-value accent-green">98.2%</span></div><div class="qs-bar"><div class="qs-bar-fill green" style="width:98%"></div></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h3>Quick Actions</h3></div>
+                    <div class="card-body">
+                        <div class="quick-actions">
+                            <a class="quick-action-item" onclick="switchTab('scraper')"><div class="qa-icon blue"><i class="fas fa-plus"></i></div><div class="qa-text"><div class="qa-title">New Scrape Job</div><div class="qa-desc">Launch wizard</div></div><i class="fas fa-chevron-right qa-arrow"></i></a>
+                            <a class="quick-action-item" onclick="switchTab('database')"><div class="qa-icon purple"><i class="fas fa-table"></i></div><div class="qa-text"><div class="qa-title">View Data</div><div class="qa-desc">Explore collected records</div></div><i class="fas fa-chevron-right qa-arrow"></i></a>
+                            <a class="quick-action-item" onclick="switchTab('logs')"><div class="qa-icon green"><i class="fas fa-chart-line"></i></div><div class="qa-text"><div class="qa-title">View Logs</div><div class="qa-desc">System health &amp; errors</div></div><i class="fas fa-chevron-right qa-arrow"></i></a>
                         </div>
                     </div>
                 </div>
             </div>
+            <div class="card" style="margin-top:1.25rem;">
+                <div class="card-header"><div class="card-header-left"><h3>Recent Runs</h3><span class="card-header-sub">Status of the latest scraping operations</span></div><a class="view-all-link" onclick="switchTab('history')">View All <i class="fas fa-arrow-right"></i></a></div>
+                <div class="card-body no-pad">
+                    <div id="recentRunsTable"><table class="data-table"><thead><tr><th>JOB NAME</th><th>TARGET</th><th>STATUS</th><th>RECORDS</th><th>DURATION</th><th>ACTIONS</th></tr></thead><tbody id="recentTasks"></tbody></table></div>
+                    <div class="empty-state" id="dashboardEmpty"><div class="empty-icon"><i class="fas fa-inbox"></i></div><h3>No Jobs Yet</h3><p>Start scraping to see your recent activity here.</p></div>
+                </div>
+            </div>
         </div>
 
-        <!-- ==================== SCRAPER TAB ==================== -->
+        <!-- SCRAPER -->
         <div class="page-content" id="tabScraper" style="display:none;">
             <div class="scraper-layout">
-                <!-- Configuration Panel -->
                 <div class="card config-card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-sliders"></i> Scraping Configuration</h3>
-                    </div>
+                    <div class="card-header"><h3><i class="fas fa-sliders"></i> Scraper Wizard</h3><span class="card-header-sub">Configure and launch data extraction jobs.</span></div>
                     <div class="card-body">
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-search"></i> Search Terms / Categories
-                                <span class="form-hint">One per line</span>
-                            </label>
-                            <textarea id="searchTerms" class="form-textarea" placeholder="liquor stores&#10;wine shops&#10;beer distributors&#10;alcohol stores"></textarea>
+                        <div class="wizard-section">
+                            <div class="wizard-label">JOB CONFIGURATION</div>
+                            <div class="wizard-step">
+                                <div class="step-indicator"><div class="step-num active-step">1</div><div class="step-line"></div></div>
+                                <div class="step-content">
+                                    <div class="step-title">Target Selection</div>
+                                    <div class="step-desc">Define the starting points for your scraping job.</div>
+                                    <div class="step-tabs"><button class="step-tab active">Google Maps Search</button></div>
+                                    <div class="form-group"><label class="form-label">Search Terms *</label><textarea id="searchTerms" class="form-textarea" placeholder="liquor stores&#10;wine shops&#10;beer distributors"></textarea><span class="form-hint">One search term per line</span></div>
+                                    <div class="form-group"><label class="form-label">Zip Codes *</label><textarea id="zipCodes" class="form-textarea" placeholder="10001 New York NY USA&#10;90001 Los Angeles CA USA&#10;60601 Chicago IL USA"></textarea><span class="form-hint">Format: zipcode city state country</span></div>
+                                </div>
+                            </div>
+                            <div class="wizard-step">
+                                <div class="step-indicator"><div class="step-num">2</div></div>
+                                <div class="step-content"><div class="step-title">Extraction Settings</div><div class="form-row"><div class="form-group form-group-half"><label class="form-label">Max Results per Search</label><input type="number" id="maxResults" class="form-input" value="20" min="1" max="100"></div></div></div>
+                            </div>
                         </div>
-
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-location-dot"></i> Zip Codes
-                                <span class="form-hint">Format: zipcode city state country</span>
-                            </label>
-                            <textarea id="zipCodes" class="form-textarea" placeholder="10001 New York NY USA&#10;90001 Los Angeles CA USA&#10;60601 Chicago IL USA"></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-hashtag"></i> Max Results per Search
-                            </label>
-                            <input type="number" id="maxResults" class="form-input" value="20" min="1" max="100">
-                        </div>
-
-                        <button id="startBtn" class="btn btn-primary btn-block" onclick="startScraping()">
-                            <i class="fas fa-rocket"></i> Start Scraping
-                        </button>
+                        <div class="wizard-actions"><button id="startBtn" class="btn btn-primary btn-block" onclick="startScraping()"><i class="fas fa-play"></i> Run Scraper</button></div>
                     </div>
                 </div>
-
-                <!-- Results Panel -->
-                <div class="results-area">
-                    <!-- Live Stats -->
-                    <div class="live-stats">
-                        <div class="live-stat">
-                            <div class="live-stat-value" id="statTotal">0</div>
-                            <div class="live-stat-label">Leads Found</div>
-                        </div>
-                        <div class="live-stat">
-                            <div class="live-stat-value accent-green" id="statEmails">0</div>
-                            <div class="live-stat-label">With Emails</div>
-                        </div>
-                        <div class="live-stat">
-                            <div class="live-stat-value accent-orange" id="statPos">0</div>
-                            <div class="live-stat-label">POS Found</div>
-                        </div>
-                        <div class="live-stat">
-                            <div class="live-stat-value" id="statRunning">Idle</div>
-                            <div class="live-stat-label">Status</div>
+                <div class="monitor-panel">
+                    <div class="card">
+                        <div class="card-header"><h3>Live Monitor</h3><div class="monitor-status" id="monitorStatus"><span class="monitor-badge idle">Idle</span></div></div>
+                        <div class="card-body">
+                            <div class="monitor-stats">
+                                <div class="monitor-stat"><div class="ms-label">LEADS FOUND</div><div class="ms-value" id="statTotal">0</div></div>
+                                <div class="monitor-stat"><div class="ms-label">WITH EMAILS</div><div class="ms-value accent-green" id="statEmails">0</div></div>
+                                <div class="monitor-stat"><div class="ms-label">SUCCESS</div><div class="ms-value accent-green" id="statSuccess">--</div></div>
+                                <div class="monitor-stat"><div class="ms-label">POS FOUND</div><div class="ms-value accent-orange" id="statPos">0</div></div>
+                            </div>
+                            <div class="progress-card" id="progressContainer" style="display:none;"><div class="progress-info"><span id="progressText">Starting...</span><span id="progressPercent">0%</span></div><div class="progress-track"><div class="progress-fill" id="progressBar"></div></div></div>
                         </div>
                     </div>
-
-                    <!-- Progress -->
-                    <div class="progress-card" id="progressContainer" style="display:none;">
-                        <div class="progress-info">
-                            <span id="progressText">Starting...</span>
-                            <span id="progressPercent">0%</span>
+                    <div class="card" style="margin-top:1rem;"><div class="card-header"><h3>Export Results</h3></div><div class="card-body"><div class="export-btns"><button class="btn btn-success btn-sm" onclick="exportResults('csv')"><i class="fas fa-file-csv"></i> Export CSV</button><button class="btn btn-outline btn-sm" onclick="exportResults('json')"><i class="fas fa-file-code"></i> Export JSON</button></div></div></div>
+                    <div class="card" style="margin-top:1rem;">
+                        <div class="card-header"><h3>Scraped Results</h3><div class="search-box search-sm"><i class="fas fa-search"></i><input type="text" id="filterInput" placeholder="Filter results..." oninput="renderResults(allResults)"></div></div>
+                        <div class="card-body no-pad">
+                            <div class="empty-state" id="emptyState"><div class="empty-icon"><i class="fas fa-magnifying-glass-chart"></i></div><h3>Ready to Scrape</h3><p>Configure your search terms, then hit "Run Scraper" to find leads.</p></div>
+                            <div class="table-wrapper" id="tableContainer" style="display:none;"><table class="data-table"><thead><tr><th>#</th><th>Name</th><th>Address</th><th>Phone</th><th>Email</th><th>Website</th><th>Social</th><th>Rating</th><th>POS</th><th>Status</th></tr></thead><tbody id="resultsBody"></tbody></table></div>
                         </div>
-                        <div class="progress-track">
-                            <div class="progress-fill" id="progressBar"></div>
-                        </div>
-                    </div>
-
-                    <!-- Actions Bar -->
-                    <div class="actions-bar">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="filterInput" placeholder="Filter results..." oninput="renderResults(allResults)">
-                        </div>
-                        <div class="action-btns">
-                            <button class="btn btn-success btn-sm" id="exportCsvBtn" onclick="exportResults('csv')">
-                                <i class="fas fa-file-csv"></i> CSV
-                            </button>
-                            <button class="btn btn-outline btn-sm" id="exportJsonBtn" onclick="exportResults('json')">
-                                <i class="fas fa-file-code"></i> JSON
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Empty State -->
-                    <div class="empty-state" id="emptyState">
-                        <div class="empty-icon"><i class="fas fa-magnifying-glass-chart"></i></div>
-                        <h3>Ready to Scrape</h3>
-                        <p>Configure your search terms and zip codes, then hit "Start Scraping" to find leads.</p>
-                    </div>
-
-                    <!-- Results Table -->
-                    <div class="table-wrapper" id="tableContainer" style="display:none;">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Name</th>
-                                    <th>Address</th>
-                                    <th>Phone</th>
-                                    <th>Email</th>
-                                    <th>All Emails</th>
-                                    <th>Source</th>
-                                    <th>Website</th>
-                                    <th>Social</th>
-                                    <th>Rating</th>
-                                    <th>Reviews</th>
-                                    <th>POS</th>
-                                    <th>POS System</th>
-                                    <th>Delivery</th>
-                                    <th>Site Type</th>
-                                    <th>Status</th>
-                                    <th>Map</th>
-                                </tr>
-                            </thead>
-                            <tbody id="resultsBody"></tbody>
-                        </table>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ==================== TASK HISTORY TAB ==================== -->
-        <div class="page-content" id="tabHistory" style="display:none;">
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-clock-rotate-left"></i> Task History</h3>
-                    <div class="card-actions">
-                        <button class="btn btn-danger btn-sm" onclick="deleteAllData()">
-                            <i class="fas fa-trash-can"></i> Delete All
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="table-wrapper" id="tasksTableWrapper" style="display:none;">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Job ID</th>
-                                    <th>Search Term</th>
-                                    <th>Zip Codes</th>
-                                    <th>Status</th>
-                                    <th>Results</th>
-                                    <th>Created</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tasksBody"></tbody>
-                        </table>
-                    </div>
-                    <div class="empty-state" id="tasksEmpty">
-                        <div class="empty-icon"><i class="fas fa-inbox"></i></div>
-                        <h3>No Tasks Yet</h3>
-                        <p>Start scraping to see your task history here.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ==================== DATABASE TAB ==================== -->
+        <!-- DATA TABLE -->
         <div class="page-content" id="tabDatabase" style="display:none;">
             <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-database"></i> Database Explorer</h3>
-                    <div class="card-actions">
-                        <select id="industryFilter" class="form-select" onchange="loadDatabaseData()">
-                            <option value="">All Industries</option>
-                        </select>
-                        <button class="btn btn-success btn-sm" onclick="exportDbCsv()">
-                            <i class="fas fa-file-csv"></i> Download CSV
-                        </button>
-                        <button class="btn btn-outline btn-sm" onclick="exportDbJson()">
-                            <i class="fas fa-file-code"></i> Download JSON
-                        </button>
-                    </div>
+                <div class="card-header"><h3><i class="fas fa-table"></i> Data Table View</h3><div class="card-actions"><div class="search-box"><i class="fas fa-search"></i><input type="text" id="dbFilterInput" placeholder="Search records, domains, emails..." oninput="filterDbTable()"></div><select id="industryFilter" class="form-select" onchange="loadDatabaseData()"><option value="">All Industries</option></select><button class="btn btn-outline btn-sm" onclick="exportDbCsv()"><i class="fas fa-download"></i> Export</button></div></div>
+                <div class="card-body no-pad">
+                    <div class="db-toolbar"><span class="record-count" id="dbResultCount">0 records</span><div class="toolbar-actions"><button class="btn btn-outline btn-xs" onclick="loadDatabaseData()"><i class="fas fa-rotate"></i> Refresh</button><button class="btn btn-outline btn-xs" onclick="exportDbCsv()"><i class="fas fa-file-csv"></i> CSV</button><button class="btn btn-outline btn-xs" onclick="exportDbJson()"><i class="fas fa-file-code"></i> JSON</button></div></div>
+                    <div class="table-wrapper" id="dbTableContainer" style="display:none;"><table class="data-table"><thead><tr><th>COMPANY</th><th>DOMAIN</th><th>INDUSTRY</th><th>EMAIL</th><th>PHONE</th><th>RATING</th><th>POS SYSTEM</th><th>STATUS</th></tr></thead><tbody id="dbBody"></tbody></table></div>
+                    <div class="empty-state" id="dbEmpty"><div class="empty-icon"><i class="fas fa-box-open"></i></div><h3>No Data in Database</h3><p>Scraped leads are automatically saved here. Start scraping to populate your database.</p></div>
                 </div>
-                <div class="card-body">
-                    <div class="db-toolbar">
-                        <span class="record-count" id="dbResultCount">0 records</span>
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="dbFilterInput" placeholder="Search by name, email, phone..." oninput="filterDbTable()">
+            </div>
+        </div>
+
+        <!-- TASK HISTORY -->
+        <div class="page-content" id="tabHistory" style="display:none;">
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-flask"></i> Task History &amp; Enrichment</h3><div class="card-actions"><button class="btn btn-danger btn-sm" onclick="deleteAllData()"><i class="fas fa-trash-can"></i> Delete All</button></div></div>
+                <div class="card-body no-pad">
+                    <div class="table-wrapper" id="tasksTableWrapper" style="display:none;"><table class="data-table"><thead><tr><th>JOB ID</th><th>SEARCH TERM</th><th>LOCATIONS</th><th>STATUS</th><th>RECORDS</th><th>CREATED</th><th>ACTIONS</th></tr></thead><tbody id="tasksBody"></tbody></table></div>
+                    <div class="empty-state" id="tasksEmpty"><div class="empty-icon"><i class="fas fa-inbox"></i></div><h3>No Tasks Yet</h3><p>Start scraping to see your task history here.</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LOGS -->
+        <div class="page-content" id="tabLogs" style="display:none;">
+            <div class="stats-grid stats-grid-4">
+                <div class="stat-card stat-card-compact"><div class="stat-content"><div class="stat-number accent-green">99.9%</div><div class="stat-label">SYSTEM HEALTH</div><div class="stat-trend up"><i class="fas fa-arrow-up"></i> <span>0.1%</span> vs last hour</div></div></div>
+                <div class="stat-card stat-card-compact"><div class="stat-content"><div class="stat-number">245ms</div><div class="stat-label">AVG LATENCY</div><div class="stat-trend down"><i class="fas fa-arrow-down"></i> <span>12ms</span> vs last hour</div></div></div>
+                <div class="stat-card stat-card-compact"><div class="stat-content"><div class="stat-number accent-red">1.2%</div><div class="stat-label">ERROR RATE</div><div class="stat-trend down"><i class="fas fa-arrow-down"></i> <span>0.4%</span> vs last hour</div></div></div>
+                <div class="stat-card stat-card-compact"><div class="stat-content"><div class="stat-number accent-blue" id="activeJobs">0</div><div class="stat-label">ACTIVE JOBS</div><div class="stat-trend neutral"><i class="fas fa-minus"></i> running now</div></div></div>
+            </div>
+            <div class="card" style="margin-top:1.25rem;">
+                <div class="card-header"><h3><i class="fas fa-terminal"></i> Log Stream</h3><div class="card-actions"><button class="btn btn-outline btn-xs log-filter active" data-level="all" onclick="filterLogs(this,'all')">All</button><button class="btn btn-outline btn-xs log-filter" data-level="error" onclick="filterLogs(this,'error')">Error</button><button class="btn btn-outline btn-xs log-filter" data-level="warn" onclick="filterLogs(this,'warn')">Warn</button><button class="btn btn-outline btn-xs log-filter" data-level="info" onclick="filterLogs(this,'info')">Info</button></div></div>
+                <div class="card-body"><div class="log-stream" id="logStream"><div class="log-entry info"><span class="log-time">--:--:--</span><span class="log-badge info">INFO</span><span class="log-msg">System initialized. Waiting for scraping jobs...</span></div></div></div>
+            </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div class="page-content" id="tabSettings" style="display:none;">
+            <div class="settings-layout">
+                <div class="settings-sidebar"><a class="settings-nav-item active" onclick="switchSettingsTab(this, 'apikeys')"><i class="fas fa-key"></i> API Keys</a><a class="settings-nav-item" onclick="switchSettingsTab(this, 'general')"><i class="fas fa-gear"></i> General</a></div>
+                <div class="settings-content">
+                    <div class="card">
+                        <div class="card-header"><h3>Settings</h3><button class="btn btn-primary btn-sm"><i class="fas fa-save"></i> Save Changes</button></div>
+                        <div class="card-body">
+                            <div class="settings-section" id="settingsApikeys">
+                                <h4 class="settings-section-title">API Key Configuration</h4><p class="settings-desc">Configure API key authentication for protected endpoints.</p>
+                                <div class="settings-item"><div class="settings-item-label"><span class="si-title">API Key Authentication</span><span class="si-desc">Set API_KEY env variable to protect write/delete endpoints</span></div><div class="toggle-switch"><input type="checkbox" id="apiKeyToggle"><label for="apiKeyToggle"></label></div></div>
+                                <div class="settings-item"><div class="settings-item-label"><span class="si-title">Supabase Connection</span><span class="si-desc" id="supabaseStatus">Checking...</span></div><div class="status-indicator" id="supabaseIndicator"><div class="status-dot"></div></div></div>
+                            </div>
+                            <div class="settings-section" id="settingsGeneral" style="display:none;">
+                                <h4 class="settings-section-title">General Settings</h4><p class="settings-desc">Configure general application behavior.</p>
+                                <div class="settings-item"><div class="settings-item-label"><span class="si-title">Max Concurrent Browsers</span><span class="si-desc">Number of browser instances for parallel scraping</span></div><span class="settings-value">3</span></div>
+                                <div class="settings-item"><div class="settings-item-label"><span class="si-title">Request Timeout</span><span class="si-desc">Maximum wait time for HTTP requests</span></div><span class="settings-value">15s</span></div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="table-wrapper" id="dbTableContainer" style="display:none;">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Name</th>
-                                    <th>Address</th>
-                                    <th>Phone</th>
-                                    <th>Email</th>
-                                    <th>Website</th>
-                                    <th>Facebook</th>
-                                    <th>Instagram</th>
-                                    <th>Rating</th>
-                                    <th>POS</th>
-                                    <th>Delivery</th>
-                                    <th>Site Type</th>
-                                    <th>Industry</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dbBody"></tbody>
-                        </table>
-                    </div>
-                    <div class="empty-state" id="dbEmpty">
-                        <div class="empty-icon"><i class="fas fa-box-open"></i></div>
-                        <h3>No Data in Database</h3>
-                        <p>Scraped leads are automatically saved here. Start scraping to populate your database.</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
-
     <script src="/static/js/app.js"></script>
 </body>
 </html>

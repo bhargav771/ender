@@ -1,7 +1,7 @@
 """Data models for the restaurant leads scraper."""
 
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ScrapeRequest(BaseModel):
@@ -9,7 +9,7 @@ class ScrapeRequest(BaseModel):
 
     search_terms: list[str]  # one per line from UI
     zip_codes: list[str]  # format: "zipcode city state country"
-    max_results_per_search: int = 20
+    max_results_per_search: int = Field(default=20, ge=1, le=100)
 
 
 class LeadResult(BaseModel):

@@ -2,6 +2,7 @@
 
 import asyncio
 import re
+import ssl
 import logging
 from urllib.parse import urljoin, urlparse
 
@@ -9,6 +10,12 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 from app.config import REQUEST_TIMEOUT, MAX_CONCURRENT_REQUESTS
+
+
+def _create_ssl_context() -> ssl.SSLContext:
+    """Create an SSL context that verifies certificates but tolerates common issues."""
+    ctx = ssl.create_default_context()
+    return ctx
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +158,7 @@ async def _fetch_page(session: aiohttp.ClientSession, url: str) -> str:
         }
         async with session.get(
             url, headers=headers, timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT),
-            ssl=False, allow_redirects=True
+            ssl=_create_ssl_context(), allow_redirects=True
         ) as response:
             if response.status == 200:
                 return await response.text(errors="replace")
@@ -332,7 +339,7 @@ async def extract_website_emails(website_url: str) -> dict:
     social_links = {}
 
     # Phase 1: Fast aiohttp extraction
-    connector = aiohttp.TCPConnector(limit=MAX_CONCURRENT_REQUESTS, ssl=False)
+    connector = aiohttp.TCPConnector(limit=MAX_CONCURRENT_REQUESTS, ssl=_create_ssl_context())
     async with aiohttp.ClientSession(connector=connector) as session:
         homepage_html = await _fetch_page(session, website_url)
         if homepage_html:
@@ -534,7 +541,7 @@ async def extract_instagram_email(instagram_url: str) -> list[str]:
     except Exception as e:
         logger.debug(f"Playwright Instagram extraction failed for {instagram_url}: {e}")
         # Fallback to aiohttp
-        connector = aiohttp.TCPConnector(limit=5, ssl=False)
+        connector = aiohttp.TCPConnector(limit=5, ssl=_create_ssl_context())
         async with aiohttp.ClientSession(connector=connector) as session:
             html = await _fetch_page(session, instagram_url)
             if html:
