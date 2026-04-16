@@ -188,7 +188,7 @@
                         <div class="card-body">
                             <div class="settings-section" id="settingsApikeys">
                                 <h4 class="settings-section-title">API Key Configuration</h4><p class="settings-desc">Configure API key authentication for protected endpoints.</p>
-                                <div class="settings-item"><div class="settings-item-label"><span class="si-title">API Key Authentication</span><span class="si-desc">Set API_KEY env variable to protect write/delete endpoints</span></div><div class="toggle-switch"><input type="checkbox" id="apiKeyToggle"><label for="apiKeyToggle"></label></div></div>
+                                <div class="settings-item"><div class="settings-item-label"><span class="si-title">API Key</span><span class="si-desc">Enter the API key matching your server's API_KEY env variable</span></div><div style="display:flex;gap:0.5rem;align-items:center;"><input type="password" id="apiKeyInput" class="form-input" placeholder="Enter API key..." style="width:220px;font-size:0.82rem;" value=""><button class="btn btn-outline btn-xs" onclick="saveApiKey()"><i class="fas fa-save"></i> Save</button><button class="btn btn-outline btn-xs" onclick="clearApiKey()"><i class="fas fa-trash"></i> Clear</button></div></div>
                                 <div class="settings-item"><div class="settings-item-label"><span class="si-title">Supabase Connection</span><span class="si-desc" id="supabaseStatus">Checking...</span></div><div class="status-indicator" id="supabaseIndicator"><div class="status-dot"></div></div></div>
                             </div>
                             <div class="settings-section" id="settingsGeneral" style="display:none;">

@@ -8,6 +8,39 @@ let allResults = [];
 let dbData = [];
 
 // ═══════════════════════════════════════════════════════════════
+// API KEY HELPER
+// ═══════════════════════════════════════════════════════════════
+
+function getApiHeaders(contentType) {
+    const headers = {};
+    if (contentType) headers['Content-Type'] = contentType;
+    const apiKey = localStorage.getItem('scrapepro_api_key');
+    if (apiKey) headers['X-API-Key'] = apiKey;
+    return headers;
+}
+
+function saveApiKey() {
+    const input = document.getElementById('apiKeyInput');
+    const key = (input.value || '').trim();
+    if (!key) { showToast('Enter an API key first', 'error'); return; }
+    localStorage.setItem('scrapepro_api_key', key);
+    showToast('API key saved to browser', 'success');
+}
+
+function clearApiKey() {
+    localStorage.removeItem('scrapepro_api_key');
+    const input = document.getElementById('apiKeyInput');
+    if (input) input.value = '';
+    showToast('API key cleared', 'success');
+}
+
+function loadSavedApiKey() {
+    const saved = localStorage.getItem('scrapepro_api_key');
+    const input = document.getElementById('apiKeyInput');
+    if (saved && input) input.value = saved;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // TAB SWITCHING
 // ═══════════════════════════════════════════════════════════════
 
@@ -312,7 +345,7 @@ async function startScraping() {
     try {
         const response = await fetch('/api/scrape', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getApiHeaders('application/json'),
             body: JSON.stringify({ search_terms: searchTerms, zip_codes: zipCodes, max_results_per_search: maxResults }),
         });
 
@@ -530,7 +563,7 @@ async function deleteTask(jobId) {
     if (!confirm(`Delete task ${jobId} and ALL its data?`)) return;
 
     try {
-        const response = await fetch(`/api/tasks/${jobId}`, { method: 'DELETE' });
+        const response = await fetch(`/api/tasks/${jobId}`, { method: 'DELETE', headers: getApiHeaders() });
         const data = await response.json();
         if (response.ok) {
             showToast('Task deleted.', 'success');
@@ -550,7 +583,7 @@ async function deleteAllData() {
     if (!confirm('Are you SURE? This CANNOT be undone.')) return;
 
     try {
-        const response = await fetch('/api/data', { method: 'DELETE' });
+        const response = await fetch('/api/data', { method: 'DELETE', headers: getApiHeaders() });
         if (response.ok) {
             showToast('All data deleted.', 'success');
             addLogEntry('warn', 'All data deleted by user');
@@ -631,7 +664,8 @@ function renderDbTable(data) {
 
     dbBody.innerHTML = data.map((r, i) => {
         const websiteUrl = r.website ? (r.website.startsWith('http') ? r.website : 'https://' + r.website) : '';
-        const domain = websiteUrl ? new URL(websiteUrl).hostname.replace('www.', '') : '-';
+        let domain = '-';
+        try { if (websiteUrl) domain = new URL(websiteUrl).hostname.replace('www.', ''); } catch (e) { domain = websiteUrl.replace(/^https?:\/\//, '').split('/')[0] || '-'; }
         const statusBadge = (r.status || '') === 'Open' ?
             '<span class="cell-open">Active</span>' :
             '<span class="cell-closed">Closed</span>';
@@ -753,3 +787,4 @@ async function checkDbConnection() {
 // Boot
 switchTab('dashboard');
 checkDbConnection();
+loadSavedApiKey();
