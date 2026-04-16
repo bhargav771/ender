@@ -14,6 +14,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.models import ScrapeRequest
+from app.config import MAX_CONCURRENT_BROWSERS
 from app.scraper.orchestrator import run_scrape_job, get_job, get_all_jobs
 from app.exporter import export_to_csv, export_to_json
 from app import database as db
@@ -110,7 +111,7 @@ async def get_job_status(job_id: str):
         if job.leads_per_combination and job.completed < job.total:
             avg_time = sum(job.leads_per_combination) / len(job.leads_per_combination)
             remaining = job.total - job.completed
-            eta_seconds = round(avg_time * remaining)
+            eta_seconds = round(avg_time * remaining / max(MAX_CONCURRENT_BROWSERS, 1))
 
     return {
         "job_id": job.job_id,
