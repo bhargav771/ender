@@ -1,5 +1,5 @@
 /**
- * LeadScraper Pro — Frontend JavaScript
+ * ScrapePro — Frontend JavaScript
  */
 
 let currentJobId = null;
@@ -17,19 +17,25 @@ function switchTab(tab) {
     document.getElementById('tabScraper').style.display = 'none';
     document.getElementById('tabHistory').style.display = 'none';
     document.getElementById('tabDatabase').style.display = 'none';
+    document.getElementById('tabLogs').style.display = 'none';
+    document.getElementById('tabSettings').style.display = 'none';
 
     // Remove active from nav items
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
 
     // Show selected tab and set active nav
     const titles = {
-        dashboard: 'Dashboard',
-        scraper: 'Scraper',
-        history: 'Task History',
-        database: 'Database Explorer'
+        dashboard: ['Dashboard Overview', 'Real-time scraping metrics & health'],
+        scraper: ['Scraper Control Panel', 'Configure and launch data extraction jobs'],
+        history: ['Enrichment Module', 'Task history and data enrichment'],
+        database: ['Data Table View', 'Explore and manage collected records'],
+        logs: ['Logs & Monitoring', 'System health, latency, and error tracking'],
+        settings: ['Settings', 'API keys, connections, and preferences']
     };
 
-    document.getElementById('pageTitle').textContent = titles[tab] || 'Dashboard';
+    const [title, subtitle] = titles[tab] || titles.dashboard;
+    document.getElementById('pageTitle').textContent = title;
+    document.getElementById('pageSubtitle').textContent = subtitle;
 
     const navItem = document.querySelector(`.nav-item[data-tab="${tab}"]`);
     if (navItem) navItem.classList.add('active');
@@ -51,6 +57,13 @@ function switchTab(tab) {
             document.getElementById('tabDatabase').style.display = 'block';
             loadIndustries();
             loadDatabaseData();
+            break;
+        case 'logs':
+            document.getElementById('tabLogs').style.display = 'block';
+            break;
+        case 'settings':
+            document.getElementById('tabSettings').style.display = 'block';
+            checkSupabaseStatus();
             break;
     }
 
@@ -74,6 +87,65 @@ function toggleSidebar() {
         document.body.appendChild(overlay);
     }
     overlay.classList.toggle('active');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SETTINGS TAB
+// ═══════════════════════════════════════════════════════════════
+
+function switchSettingsTab(el, section) {
+    document.querySelectorAll('.settings-nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('settingsApikeys').style.display = section === 'apikeys' ? 'block' : 'none';
+    document.getElementById('settingsGeneral').style.display = section === 'general' ? 'block' : 'none';
+}
+
+async function checkSupabaseStatus() {
+    const statusEl = document.getElementById('supabaseStatus');
+    const indicator = document.getElementById('supabaseIndicator');
+    try {
+        const response = await fetch('/api/stats');
+        if (response.ok) {
+            statusEl.textContent = 'Connected and operational';
+            statusEl.style.color = '#10b981';
+            if (indicator) indicator.querySelector('.status-dot').classList.add('connected');
+        } else {
+            statusEl.textContent = 'Connection error';
+            statusEl.style.color = '#ef4444';
+        }
+    } catch (e) {
+        statusEl.textContent = 'Disconnected';
+        statusEl.style.color = '#ef4444';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOGS TAB
+// ═══════════════════════════════════════════════════════════════
+
+function filterLogs(btn, level) {
+    document.querySelectorAll('.log-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const entries = document.querySelectorAll('.log-entry');
+    entries.forEach(entry => {
+        if (level === 'all') {
+            entry.style.display = 'flex';
+        } else {
+            entry.style.display = entry.classList.contains(level) ? 'flex' : 'none';
+        }
+    });
+}
+
+function addLogEntry(level, message) {
+    const stream = document.getElementById('logStream');
+    if (!stream) return;
+    const now = new Date();
+    const time = now.toTimeString().split(' ')[0];
+    const entry = document.createElement('div');
+    entry.className = `log-entry ${level}`;
+    entry.innerHTML = `<span class="log-time">${time}</span><span class="log-badge ${level}">${level.toUpperCase()}</span><span class="log-msg">${escapeHtml(message)}</span>`;
+    stream.appendChild(entry);
+    stream.scrollTop = stream.scrollHeight;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -162,7 +234,7 @@ function animateNumber(elementId, target) {
     function update(timestamp) {
         const elapsed = timestamp - start;
         const progress = Math.min(elapsed / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
         el.textContent = Math.round(current + (target - current) * eased);
         if (progress < 1) requestAnimationFrame(update);
     }
@@ -172,40 +244,40 @@ function animateNumber(elementId, target) {
 
 async function loadRecentTasks() {
     const container = document.getElementById('recentTasks');
+    const emptyEl = document.getElementById('dashboardEmpty');
+    const tableEl = document.getElementById('recentRunsTable');
     try {
         const response = await fetch('/api/tasks');
         const data = await response.json();
         const tasks = (data.tasks || []).slice(0, 8);
 
         if (tasks.length === 0) {
-            container.innerHTML = `
-                <div class="empty-placeholder">
-                    <i class="fas fa-inbox"></i>
-                    <p>No tasks yet. Start scraping to see activity here.</p>
-                </div>`;
+            if (emptyEl) emptyEl.style.display = 'block';
+            if (tableEl) tableEl.style.display = 'none';
             return;
         }
 
-        container.innerHTML = tasks.map(t => {
-            const statusClass = t.status === 'Completed' ? 'completed' :
-                               t.status === 'Running' ? 'running' : 'failed';
-            const statusIcon = t.status === 'Completed' ? 'fa-check' :
-                              t.status === 'Running' ? 'fa-spinner fa-spin' : 'fa-xmark';
-            const badgeClass = t.status === 'Completed' ? 'badge-completed' :
-                              t.status === 'Running' ? 'badge-running' : 'badge-failed';
-            const created = t.created_at ? new Date(t.created_at).toLocaleDateString() : '';
+        if (emptyEl) emptyEl.style.display = 'none';
+        if (tableEl) tableEl.style.display = 'block';
 
-            return `
-                <div class="task-activity-item">
-                    <div class="task-activity-icon ${statusClass}">
-                        <i class="fas ${statusIcon}"></i>
-                    </div>
-                    <div class="task-activity-info">
-                        <div class="task-name">${escapeHtml(t.search_term)}</div>
-                        <div class="task-meta">${t.total_results || 0} results &middot; ${created}</div>
-                    </div>
-                    <span class="task-activity-badge ${badgeClass}">${t.status}</span>
-                </div>`;
+        container.innerHTML = tasks.map(t => {
+            const statusClass = t.status === 'Completed' ? 'cell-open' :
+                               t.status === 'Running' ? 'accent-blue' : 'cell-closed';
+            const created = t.created_at ? new Date(t.created_at).toLocaleDateString() : '-';
+            const statusBadge = t.status === 'Completed' ?
+                '<span style="color:var(--success);font-weight:600;">Completed</span>' :
+                t.status === 'Running' ?
+                '<span style="color:var(--blue);font-weight:600;">Running</span>' :
+                '<span style="color:var(--danger);font-weight:600;">Failed</span>';
+
+            return `<tr>
+                <td><span style="font-weight:600;color:var(--text-primary);">${escapeHtml(t.search_term)}</span></td>
+                <td>${escapeHtml(t.zip_codes) || '-'}</td>
+                <td>${statusBadge}</td>
+                <td>${t.total_results || 0}</td>
+                <td>${created}</td>
+                <td><button class="btn btn-outline btn-xs" onclick="viewTaskResults('${t.job_id}')"><i class="fas fa-eye"></i></button></td>
+            </tr>`;
         }).join('');
     } catch (error) {
         console.error('Failed to load recent tasks:', error);
@@ -231,6 +303,12 @@ async function startScraping() {
     startBtn.disabled = true;
     startBtn.innerHTML = '<span class="spinner"></span> Scraping...';
 
+    // Update monitor badge
+    const badge = document.querySelector('.monitor-badge');
+    if (badge) { badge.className = 'monitor-badge running'; badge.textContent = 'Running'; }
+
+    addLogEntry('info', `Starting scrape: ${searchTerms.join(', ')} in ${zipCodes.length} locations`);
+
     try {
         const response = await fetch('/api/scrape', {
             method: 'POST',
@@ -243,6 +321,7 @@ async function startScraping() {
 
         currentJobId = data.job_id;
         showToast('Scraping started!', 'success');
+        addLogEntry('info', `Job ${data.job_id} created successfully`);
 
         document.getElementById('progressContainer').style.display = 'block';
         document.getElementById('progressBar').style.width = '0%';
@@ -251,8 +330,10 @@ async function startScraping() {
         startPolling();
     } catch (error) {
         showToast(error.message, 'error');
+        addLogEntry('error', `Scrape failed: ${error.message}`);
         startBtn.disabled = false;
-        startBtn.innerHTML = '<i class="fas fa-rocket"></i> Start Scraping';
+        startBtn.innerHTML = '<i class="fas fa-play"></i> Run Scraper';
+        if (badge) { badge.className = 'monitor-badge idle'; badge.textContent = 'Idle'; }
     }
 }
 
@@ -276,8 +357,11 @@ function startPolling() {
             updateLiveStats();
             renderResults(allResults);
 
-            document.getElementById('statRunning').textContent =
-                data.status === 'running' ? 'Running' : data.status;
+            // Update success stat
+            const successEl = document.getElementById('statSuccess');
+            if (successEl && data.total > 0) {
+                successEl.textContent = percent + '%';
+            }
 
             if (data.status === 'completed' || data.status === 'failed') {
                 clearInterval(pollInterval);
@@ -285,16 +369,20 @@ function startPolling() {
 
                 const startBtn = document.getElementById('startBtn');
                 startBtn.disabled = false;
-                startBtn.innerHTML = '<i class="fas fa-rocket"></i> Start Scraping';
+                startBtn.innerHTML = '<i class="fas fa-play"></i> Run Scraper';
                 document.getElementById('progressContainer').style.display = 'none';
                 document.getElementById('liveIndicator').style.display = 'none';
 
+                const badge = document.querySelector('.monitor-badge');
+
                 if (data.status === 'completed') {
                     showToast(`Done! Found ${data.results_count} leads.`, 'success');
-                    document.getElementById('statRunning').textContent = 'Done';
+                    addLogEntry('info', `Job completed: ${data.results_count} leads found`);
+                    if (badge) { badge.className = 'monitor-badge idle'; badge.textContent = 'Done'; }
                 } else {
                     showToast('Scraping failed. Check logs.', 'error');
-                    document.getElementById('statRunning').textContent = 'Failed';
+                    addLogEntry('error', 'Job failed');
+                    if (badge) { badge.className = 'monitor-badge idle'; badge.textContent = 'Failed'; }
                 }
 
                 loadDbStats();
@@ -346,18 +434,11 @@ function renderResults(results) {
             <td title="${escapeHtml(r.address)}">${escapeHtml(r.address)}</td>
             <td>${escapeHtml(r.phone)}</td>
             <td class="cell-email" title="${escapeHtml(r.final_email)}">${escapeHtml(r.final_email) || '-'}</td>
-            <td title="${escapeHtml(r.all_website_emails)}">${escapeHtml(r.all_website_emails) || '-'}</td>
-            <td>${escapeHtml(r.email_source) || '-'}</td>
             <td>${websiteUrl ? `<a href="${escapeHtml(websiteUrl)}" target="_blank" class="cell-link">Visit</a>` : '-'}</td>
             <td>${socialHtml || '-'}</td>
             <td>${escapeHtml(r.rating) || '-'}</td>
-            <td>${escapeHtml(r.reviews_count) || '-'}</td>
             <td class="${r.has_pos === 'Yes' ? 'cell-pos-yes' : 'cell-pos-no'}">${r.has_pos || '-'}</td>
-            <td title="${escapeHtml(r.pos_system)}">${escapeHtml(r.pos_system) || '-'}</td>
-            <td>${escapeHtml(r.delivery_services) || '-'}</td>
-            <td>${escapeHtml(r.website_type) || '-'}</td>
             <td class="${(r.status || '') === 'Open' ? 'cell-open' : 'cell-closed'}">${escapeHtml(r.status) || '-'}</td>
-            <td>${r.maps_url ? `<a href="${escapeHtml(r.maps_url)}" target="_blank" class="cell-link"><i class="fas fa-map-marker-alt"></i></a>` : '-'}</td>
         </tr>`;
     }).join('');
 }
@@ -436,7 +517,6 @@ async function viewTaskResults(jobId) {
             return;
         }
 
-        // Switch to database tab and show these results
         switchTab('database');
         dbData = results;
         renderDbTable(results);
@@ -454,6 +534,7 @@ async function deleteTask(jobId) {
         const data = await response.json();
         if (response.ok) {
             showToast('Task deleted.', 'success');
+            addLogEntry('warn', `Task ${jobId} deleted`);
             loadTaskHistory();
             loadDbStats();
         } else {
@@ -472,6 +553,7 @@ async function deleteAllData() {
         const response = await fetch('/api/data', { method: 'DELETE' });
         if (response.ok) {
             showToast('All data deleted.', 'success');
+            addLogEntry('warn', 'All data deleted by user');
             loadTaskHistory();
             loadDbStats();
         } else {
@@ -549,20 +631,19 @@ function renderDbTable(data) {
 
     dbBody.innerHTML = data.map((r, i) => {
         const websiteUrl = r.website ? (r.website.startsWith('http') ? r.website : 'https://' + r.website) : '';
+        const domain = websiteUrl ? new URL(websiteUrl).hostname.replace('www.', '') : '-';
+        const statusBadge = (r.status || '') === 'Open' ?
+            '<span class="cell-open">Active</span>' :
+            '<span class="cell-closed">Closed</span>';
         return `<tr>
-            <td>${i + 1}</td>
-            <td title="${escapeHtml(r.name)}">${escapeHtml(r.name)}</td>
-            <td title="${escapeHtml(r.address)}">${escapeHtml(r.address)}</td>
-            <td>${escapeHtml(r.phone)}</td>
-            <td class="cell-email" title="${escapeHtml(r.final_email)}">${escapeHtml(r.final_email) || '-'}</td>
-            <td>${websiteUrl ? `<a href="${escapeHtml(websiteUrl)}" target="_blank" class="cell-link">Visit</a>` : '-'}</td>
-            <td>${r.facebook_link ? `<a href="${escapeHtml(r.facebook_link)}" target="_blank" class="cell-link"><i class="fab fa-facebook-f"></i></a>` : '-'}</td>
-            <td>${r.instagram_link ? `<a href="${escapeHtml(r.instagram_link)}" target="_blank" class="cell-link"><i class="fab fa-instagram"></i></a>` : '-'}</td>
-            <td>${escapeHtml(r.rating) || '-'}</td>
-            <td class="${r.has_pos === 'Yes' ? 'cell-pos-yes' : 'cell-pos-no'}">${escapeHtml(r.pos_system) || (r.has_pos === 'Yes' ? 'Yes' : '-')}</td>
-            <td>${escapeHtml(r.delivery_services) || '-'}</td>
-            <td>${escapeHtml(r.website_type) || '-'}</td>
+            <td><span style="font-weight:600;color:var(--text-primary);">${escapeHtml(r.name)}</span></td>
+            <td>${websiteUrl ? `<a href="${escapeHtml(websiteUrl)}" target="_blank" class="cell-link">${escapeHtml(domain)}</a>` : '-'}</td>
             <td>${escapeHtml(r.search_query) || '-'}</td>
+            <td class="cell-email">${escapeHtml(r.final_email) || '-'}</td>
+            <td>${escapeHtml(r.phone) || '-'}</td>
+            <td>${escapeHtml(r.rating) || '-'}</td>
+            <td>${escapeHtml(r.pos_system) || (r.has_pos === 'Yes' ? 'Yes' : '-')}</td>
+            <td>${statusBadge}</td>
         </tr>`;
     }).join('');
 }
@@ -656,21 +737,16 @@ function escapeHtml(str) {
 // INITIALIZE
 // ═══════════════════════════════════════════════════════════════
 
-// Check DB connection status
 async function checkDbConnection() {
     try {
         const response = await fetch('/api/stats');
         if (response.ok) {
-            const dot = document.querySelector('.status-dot');
+            const dot = document.getElementById('dbDot');
             if (dot) dot.classList.add('connected');
-            const status = document.getElementById('dbStatus');
-            if (status) status.querySelector('span').textContent = 'Supabase Connected';
         }
     } catch (e) {
-        const dot = document.querySelector('.status-dot');
+        const dot = document.getElementById('dbDot');
         if (dot) dot.classList.remove('connected');
-        const status = document.getElementById('dbStatus');
-        if (status) status.querySelector('span').textContent = 'DB Disconnected';
     }
 }
 
