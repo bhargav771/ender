@@ -1,12 +1,16 @@
 """FastAPI application for the Restaurant Leads Scraper."""
 
 import logging
+import os
+import secrets
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.models import ScrapeRequest
 from app.scraper.orchestrator import run_scrape_job, get_job, get_all_jobs
@@ -19,6 +23,46 @@ logging.basicConfig(
 )
 
 app = FastAPI(title="Restaurant Leads Scraper", version="2.0.0")
+
+# ─── CORS Configuration ───────────────────────────────────────────────
+ALLOWED_ORIGINS = os.environ.get(
+    "ALLOWED_ORIGINS", "http://localhost:8000"
+).split(",")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in ALLOWED_ORIGINS],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["*"],
+)
+
+
+# ─── Security Headers Middleware ──────────────────────────────────────
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+
+# ─── API Key Authentication ───────────────────────────────────────────
+API_KEY = os.environ.get("API_KEY", "")
+
+
+def verify_api_key(request: Request) -> None:
+    """Verify API key for protected endpoints. Skipped if API_KEY is not set."""
+    if not API_KEY:
+        return
+    provided = request.headers.get("X-API-Key", "")
+    if not secrets.compare_digest(provided, API_KEY):
+        raise HTTPException(status_code=403, detail="Invalid or missing API key")
 
 # Static files and templates
 BASE_DIR = Path(__file__).resolve().parent
@@ -35,7 +79,7 @@ async def index(request: Request):
 # ─── Scraping Endpoints ─────────────────────────────────────────────
 
 @app.post("/api/scrape")
-async def start_scrape(request: ScrapeRequest):
+async def start_scrape(request: ScrapeRequest, _auth: None = Depends(verify_api_key)):
     """Start a new scraping job."""
     if not request.search_terms or not request.zip_codes:
         return JSONResponse(
@@ -94,7 +138,7 @@ async def list_tasks():
 
 
 @app.delete("/api/tasks/{job_id}")
-async def delete_task(job_id: str):
+async def delete_task(job_id: str, _auth: None = Depends(verify_api_key)):
     """Delete a task and all its associated data from database."""
     ok = await db.delete_task(job_id)
     if ok:
@@ -114,6 +158,7 @@ async def get_task_results(job_id: str):
 @app.get("/api/data")
 async def get_business_data(industry: str = "", limit: int = 5000):
     """Get all business data, optionally filtered by industry."""
+    limit = min(limit, 10000)
     data = await db.get_all_business_data(industry=industry, limit=limit)
     return {"data": data, "count": len(data)}
 
@@ -133,7 +178,7 @@ async def get_stats():
 
 
 @app.delete("/api/data")
-async def delete_all_data():
+async def delete_all_data(_auth: None = Depends(verify_api_key)):
     """Delete ALL business data and tasks. Use with caution."""
     ok = await db.delete_all_data()
     if ok:

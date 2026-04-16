@@ -1,12 +1,19 @@
 """POS system detection, delivery service detection, and website type analysis."""
 
 import re
+import ssl
 import logging
 
 import aiohttp
 from bs4 import BeautifulSoup
 
 from app.config import POS_SYSTEMS, REQUEST_TIMEOUT
+
+
+def _create_ssl_context() -> ssl.SSLContext:
+    """Create an SSL context that verifies certificates."""
+    ctx = ssl.create_default_context()
+    return ctx
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +128,7 @@ async def detect_pos_system(website_url: str) -> dict:
                 "Chrome/128.0.0.0 Safari/537.36"
             ),
         }
-        connector = aiohttp.TCPConnector(ssl=False)
+        connector = aiohttp.TCPConnector(ssl=_create_ssl_context())
         async with aiohttp.ClientSession(connector=connector) as session:
             async with session.get(
                 website_url,
