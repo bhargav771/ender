@@ -420,12 +420,6 @@ function startPolling() {
             updateLiveStats();
             renderResults(allResults);
 
-            // Update success stat
-            const successEl = document.getElementById('statSuccess');
-            if (successEl && data.total > 0) {
-                successEl.textContent = percent + '%';
-            }
-
             if (data.status === 'completed' || data.status === 'failed') {
                 clearInterval(pollInterval);
                 pollInterval = null;
@@ -601,7 +595,7 @@ async function downloadTaskExport(jobId, format) {
     try {
         const response = await fetch(`/api/export-task/${jobId}/${format}`);
         if (!response.ok) throw new Error('Export failed');
-        downloadBlob(response, `task_${jobId}.${format}`);
+        await downloadBlob(response, `task_${jobId}.${format}`);
         showToast(`Task ${jobId} exported as ${format.toUpperCase()}`, 'success');
     } catch (error) {
         showToast(error.message, 'error');
@@ -764,7 +758,7 @@ async function exportResults(format) {
     try {
         const response = await fetch(`/api/export/${currentJobId}/${format}`);
         if (!response.ok) throw new Error('Export failed');
-        downloadBlob(response, `leads_${currentJobId}.${format}`);
+        await downloadBlob(response, `leads_${currentJobId}.${format}`);
         showToast(`Exported ${allResults.length} leads as ${format.toUpperCase()}`, 'success');
     } catch (error) {
         showToast(error.message, 'error');
@@ -786,7 +780,7 @@ async function downloadDbExport(format, industry) {
         const url = `/api/export-db/${format}?industry=${encodeURIComponent(industry)}`;
         const response = await fetch(url);
         if (!response.ok) throw new Error('Export failed');
-        downloadBlob(response, `leads_${industry || 'all'}.${format}`);
+        await downloadBlob(response, `leads_${industry || 'all'}.${format}`);
         showToast(`Exported as ${format.toUpperCase()}`, 'success');
     } catch (error) {
         showToast(error.message, 'error');
