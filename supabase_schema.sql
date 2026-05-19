@@ -68,6 +68,39 @@ CREATE INDEX IF NOT EXISTS idx_business_industry ON business_data(search_query);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON scraping_tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_created ON scraping_tasks(created_at DESC);
 
+-- 3b. Additional performance indexes
+--     (identified from WHERE / ORDER BY / JOIN patterns in the application code)
+
+-- business_data.created_at DESC — used by get_all_business_data() ORDER BY
+CREATE INDEX IF NOT EXISTS idx_business_created_at ON business_data(created_at DESC);
+
+-- GIN trigram index on search_query — enables fast ILIKE '%pattern%' filtering
+-- in get_all_business_data() (the existing B-tree index cannot serve %pattern% ILIKE)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS idx_business_search_query_trgm
+    ON business_data USING gin (search_query gin_trgm_ops);
+
+-- Partial index on final_email — speeds up the non-empty email count in get_stats()
+CREATE INDEX IF NOT EXISTS idx_business_final_email_present
+    ON business_data(final_email)
+    WHERE final_email IS NOT NULL AND final_email != '';
+
+-- has_pos — frequently filtered on the dashboard for POS statistics
+CREATE INDEX IF NOT EXISTS idx_business_has_pos ON business_data(has_pos);
+
+-- city — used in client-side result filtering and potential geographic queries
+CREATE INDEX IF NOT EXISTS idx_business_city ON business_data(city);
+
+-- zipcode — geographic filtering by zip code
+CREATE INDEX IF NOT EXISTS idx_business_zipcode ON business_data(zipcode);
+
+-- place_id — unique Google Maps identifier, useful for deduplication lookups
+CREATE INDEX IF NOT EXISTS idx_business_place_id ON business_data(place_id)
+    WHERE place_id IS NOT NULL AND place_id != '';
+
+-- closure_status — filtering businesses by open/closed status
+CREATE INDEX IF NOT EXISTS idx_business_closure_status ON business_data(closure_status);
+
 -- 4. Enable Row Level Security (optional but recommended)
 ALTER TABLE scraping_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_data ENABLE ROW LEVEL SECURITY;
